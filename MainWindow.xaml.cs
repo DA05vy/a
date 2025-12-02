@@ -1,4 +1,4 @@
-﻿using System.Data;
+﻿using DemoBai11_12.MoHinhDuLieu;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,7 +10,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace WpfApp1
+namespace DemoBai11_12
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -21,103 +21,87 @@ namespace WpfApp1
         {
             InitializeComponent();
         }
-        List<NhanVien> dsNhanVien = new List<NhanVien>();
+        //tạo đối tượng dbContext 
+        QlnhanSuContext db = new QlnhanSuContext();
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            //hiển thị bảng Nhân viên lên datagrid ngay khi hiển thị window
+            HienThiDuLieu();
+
+            //Lấy danh sách cho combo box
+            var comboQuery = from pb in db.PhongBans
+                             select pb;
+            cboPhongBan.ItemsSource = comboQuery.ToList();
+            //comboBox hiển thị tên phòng ban
+            cboPhongBan.DisplayMemberPath = "TenPb";
+            //Khi người dùng chọn 1 phần tử trong combo thì lấy mã phòng ban tương ứng
+            cboPhongBan.SelectedValuePath = "MaPb";
+        }
+
+        private void HienThiDuLieu()
+        {
+            //-- lấy dữ liệu từ bảng
+            var nhanVienQuery = from nv in db.NhanViens
+                                select nv;
+            //--hiển thị lên datagrid
+            dtgNhanVien.ItemsSource = nhanVienQuery.ToList();
+        }
 
         private void btnThem_Click(object sender, RoutedEventArgs e)
         {
-
-            if (isKiemTra())
-            {
-                //lenh Nhap
-                //Tao doi tuong lop NhanVien
-                NhanVien nvMoi = new NhanVien();
-                //Gan gia tri nguoi dung nhap vao
-                nvMoi.MaNV = int.Parse(txtMa.Text);
-                nvMoi.HoTen = txtHoTen.Text;
-                nvMoi.NgaySinh = Convert.ToDateTime(dpNgaySinh.SelectedDate);
-                if (radNam.IsChecked == true)
-                {
-                    nvMoi.GioiTinh = "Nam";
-                }
-                else
-                {
-                    nvMoi.GioiTinh = "Nu";
-                }
-                nvMoi.PhongBan = cboPhongBan.Text;
-                nvMoi.HeSoLuong = double.Parse(txtHeSoLuong.Text);
-                dsNhanVien.Add(nvMoi);
-                //Hien thi ds trong DataGrid
-                dtgNhanVien.ItemsSource = null;
-                dtgNhanVien.ItemsSource = dsNhanVien; 
-            }
+            //thêm 1 nhân viên vào bảng
+            //-- tạo đối tượng nhân viên mới
+            NhanVien nvMoi = new NhanVien();
+            nvMoi.MaNv = txtMa.Text;
+            nvMoi.HoTen= txtHoTen.Text;
+            nvMoi.NgaySinh = dpNgaySinh.SelectedDate;
+            if (radNam.IsChecked == true)
+                nvMoi.Gioitinh = "Nam";
+            else
+                nvMoi.Gioitinh = "Nữ";
+            nvMoi.MaPb = cboPhongBan.SelectedValue.ToString();
+            //thêm vào collection 
+            db.NhanViens.Add(nvMoi);
+            //lưu thay đổi vào csdl
+            db.SaveChanges();
+            //hiển thị lại sau khi cập nhật
+            HienThiDuLieu();
         }
 
-        private void btnWindow2_Click(object sender, RoutedEventArgs e)
+        private void btnSua_Click(object sender, RoutedEventArgs e)
         {
-            int tuoiMax = dsNhanVien[0].Tuoi;
-            for ( int i  = 1; i < dsNhanVien.Count; i++ )
-            {
-                if (dsNhanVien[i].Tuoi > tuoiMax )
-                {
-                    tuoiMax = dsNhanVien [i].Tuoi;
-                }
-            }
-            List<NhanVien> dsTuoiMax = new List<NhanVien>();
-            foreach ( var items in dsNhanVien)
-            {
-                if ( items.Tuoi == tuoiMax)
-                {
-                    dsTuoiMax.Add(items);
-                }
-            }
-            Window2 myWindow = new Window2();
-            myWindow.dtgTuoiMax.ItemsSource = dsTuoiMax;
-            myWindow.Show();
+            //lấy ra đối tượng muốn sửa
+            var suaQuery = from nv in db.NhanViens
+                           where nv.MaNv == txtMa.Text
+                           select nv;
+            NhanVien nvSua = suaQuery.FirstOrDefault();
+            //sửa thông tin của đối tượng tìm được
+            nvSua.HoTen = txtHoTen.Text;
+            nvSua.NgaySinh = dpNgaySinh.SelectedDate;
+            if (radNam.IsChecked == true)
+                nvSua.Gioitinh = "Nam";
+            else
+                nvSua.Gioitinh = "Nữ";
+            nvSua.MaPb = cboPhongBan.SelectedValue.ToString();
+            //lưu thay đổi vào csdl
+            db.SaveChanges();
+            //hiển thị lại sau khi cập nhật
+            HienThiDuLieu();
         }
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private void btnXoa_Click(object sender, RoutedEventArgs e)
         {
-            dpNgaySinh.SelectedDate = DateTime.Now;
-        }
-        private bool isKiemTra()
-        {
-            //Phai nhap du truong du lieu
-            if(txtMa.Text == "")
-            {
-                MessageBox.Show("Ban chua nhap MaNV","Loi du lieu",MessageBoxButton.OK, MessageBoxImage.Error);
-                txtMa.Focus(); //Con tro nhap du lieu o txtMa
-                return false;
-            }
-            if (txtHoTen.Text == "")
-            {
-                MessageBox.Show("Ban chua nhap HoTen", "Loi du lieu", MessageBoxButton.OK, MessageBoxImage.Error);
-                txtHoTen.Focus(); //Con tro nhap du lieu o txtMa
-                return false;
-            }
-            if (txtHeSoLuong.Text == "")
-            {
-                MessageBox.Show("Ban chua nhap He so luong", "Loi du lieu", MessageBoxButton.OK, MessageBoxImage.Error);
-                txtHeSoLuong.Focus(); //Con tro nhap du lieu o txtMa
-                return false;
-            }
-            try
-            {
-                double.Parse(txtHeSoLuong.Text);
-            }
-            catch(Exception){
-                MessageBox.Show("He so luong la so thuc", "Loi du lieu", MessageBoxButton.OK, MessageBoxImage.Error);
-                txtHeSoLuong.SelectAll();
-                txtHeSoLuong.Focus();
-                return false;
-            }
-
-            int tuoi = DateTime.Now.Year - dpNgaySinh.SelectedDate.Value.Year;
-            if (tuoi < 18)
-            {
-                MessageBox.Show("Tuoi phai lon hon 18", "Loi du lieu", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-            return true;
+            //lấy ra đối tượng muốn xóa
+            var xoaQuery = from nv in db.NhanViens
+                           where nv.MaNv == txtMa.Text
+                           select nv;
+            NhanVien nvXoa = xoaQuery.FirstOrDefault();
+            //Xóa khỏi collection 
+            db.NhanViens.Remove(nvXoa);
+            //lưu thay đổi vào csdl
+            db.SaveChanges();
+            //hiển thị lại sau khi cập nhật
+            HienThiDuLieu();
         }
     }
 }
